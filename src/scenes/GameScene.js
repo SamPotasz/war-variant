@@ -3,10 +3,11 @@ import config from '../config/config'
 import DomController from '../utils/DomController'
 import PGGScene from './PGGScene';
 import Referee from '../helpers/Referee';
-import PlayerDisplay from '../helpers/Player';
+
+import HandDisplay from '../helpers/HandDisplay';
 
 const AVI_PADDING = { x: 10, y: 10 };
-const AVI_SPRITE = "frogAvi";
+
 
 export default class GameScene extends PGGScene 
 {
@@ -18,11 +19,17 @@ export default class GameScene extends PGGScene
 
 	init()
 	{
-		console.log("init game")
+    console.log("init game")
+    
+    // only the referee / server should know the state of the game
+    // but the client should know how many cards it has
+    this.referee = new Referee( this );
 	}
 
 	create() 
 	{
+    this.events = new Phaser.Events.EventEmitter();
+
 		//hide the display
 		DomController.HideOverlay();
 		
@@ -30,28 +37,45 @@ export default class GameScene extends PGGScene
 		// this.bg = this.add.sprite(config.width / 2, config.height / 2,
     // 		config.ATLAS_NAME, config.TITLE_AND_GAME_BG);
     this.cameras.main.setBackgroundColor(0xCCCCCC);
+
     
-    // add avatars
-    const botAvatar = this.add.image( 
-      config.width - AVI_PADDING.x, AVI_PADDING.y, 
-      config.ATLAS_NAME, AVI_SPRITE );
-    botAvatar.x -= botAvatar.width / 2;
-    botAvatar.y += botAvatar.height / 2;
-		
-		const playerAvi = this.add.image( 
-      AVI_PADDING.x, config.height - AVI_PADDING.y, 
-      config.ATLAS_NAME, AVI_SPRITE );
-		playerAvi.x += playerAvi.width / 2;
-		playerAvi.y -= playerAvi.height / 2;
+    this.botDisplay = new HandDisplay({
+      scene: this,
+      isPlayer: false,
+    })
+    this.playerDisplay = new HandDisplay({ 
+      scene: this,
+      isPlayer: true, 
+    });
+    this.playerDisplay.events.on(config.EVENTS.DRAW_BUTTON_CLICK, this.onDrawClicked, this);
 
-    // only the referee / server should know the state of the game
-    // but the client should know how many cards it has
-    const referee = new Referee();
-    
-    const player = new PlayerDisplay( this, referee );
-    referee.onPlayerConnect( player );
+    this.referee.events.on(
+      config.EVENTS.INITIAL_DEAL,
+      this.onInitialDeal,
+      this );
+    this.referee.events.on(
+        config.EVENTS.PLAYER_DRAW_END,
+        this.onDrawEnd,
+        this );
 
-    referee.shuffle();
+    this.referee.onClientConnect( this );
 
-	}
+    this.referee.shuffle();
+
+  }
+
+  onInitialDeal( numCardsDealt ) {
+    this.botDisplay.onInitialDeal( numCardsDealt );
+    this.playerDisplay.onInitialDeal( numCardsDealt );
+  }
+
+  onDrawEnd( result ) {
+    console.log('draw result: ' + result);
+  }
+  
+  onDrawClicked() {
+    console.log('draw clicked!');
+    // this.referee.onPlayerDraw();
+    this.events.emit( config.EVENTS.PLAYER_DRAW_START );
+  }
 }

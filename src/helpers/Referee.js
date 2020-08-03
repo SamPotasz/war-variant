@@ -6,16 +6,16 @@ import Hand from './Hand';
 // here, it's acting as a pseudo-server
 export default class Referee {
 
-  constructor(player) {
+  constructor( clientScene ) {
     // send events back and forth to client (instead of websockets)
     this.events = new Phaser.Events.EventEmitter();
-
-    
+    this.client = clientScene;
   }
 
-  onPlayerConnect( player ) {
-    player.events.on( config.EVENTS.PLAYER_DRAW_START, this.onPlayerDraw, this );
-
+  onClientConnect( client ) {
+    // console.log('client connected', client);
+    client.events.on( config.EVENTS.PLAYER_DRAW_START, this.onPlayerDraw , this );
+    console.log(client);
   }
   
   // create initial starting hands.
@@ -29,6 +29,7 @@ export default class Referee {
   }
 
   onPlayerDraw() {
+    console.log('handling player draw in referee');
     const playerDraw = this.playerHand.drawTopCard();
     const botDraw = this.botHand.drawTopCard();
 
@@ -36,6 +37,7 @@ export default class Referee {
 
     const handResult = compareCards( playerDraw, botDraw );
 
+    // this.client.onDrawEnd( handResult );
     this.events.emit( config.EVENTS.PLAYER_DRAW_END, handResult );
   }
 }

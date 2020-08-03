@@ -16,9 +16,11 @@ export default {
 	ATLAS_NAME: 'spriteAtlas',
   TITLE_AND_GAME_BG: 'background',	//file name of background for title screen and main gameplay
   CARD_BACK: 'back',
+  AVATAR_SPRITE: 'frogAvi',
 
   EVENTS: {
     INITIAL_DEAL: 'first deal of the game',
+    DRAW_BUTTON_CLICK: 'DRAW_BUTTON_CLICK',
     PLAYER_DRAW_START: 'PLAYER_DRAW_START',
     PLAYER_DRAW_END: 'PLAYER_DRAW_END',
   },
