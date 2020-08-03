@@ -70,7 +70,10 @@ export default class GameScene extends PGGScene
   }
 
   onDrawEnd( result ) {
-    console.log('draw result: ' + result);
+    // console.log('draw result: ' + result);
+    const { playerDraw, botDraw, comparison } = result;
+    this.playerDisplay.showFlip( playerDraw );
+    this.botDisplay.showFlip( botDraw );
   }
   
   onDrawClicked() {

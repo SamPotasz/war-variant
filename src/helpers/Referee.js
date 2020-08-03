@@ -29,14 +29,15 @@ export default class Referee {
   }
 
   onPlayerDraw() {
-    console.log('handling player draw in referee');
     const playerDraw = this.playerHand.drawTopCard();
     const botDraw = this.botHand.drawTopCard();
 
-    console.log({playerDraw, botDraw});
-
-    const handResult = compareCards( playerDraw, botDraw );
-
+    const handResult = {
+      playerDraw,
+      botDraw,
+      compare: compareCards( playerDraw, botDraw )
+    }
+    console.log(handResult);
     // this.client.onDrawEnd( handResult );
     this.events.emit( config.EVENTS.PLAYER_DRAW_END, handResult );
   }
