@@ -31,17 +31,40 @@ export default class Referee {
   onPlayerDraw() {
     const playerDraw = this.playerHand.drawTopCard();
     const botDraw = this.botHand.drawTopCard();
+    const comparison = compareCards( playerDraw, botDraw );
 
     const handResult = {
       playerDraw,
       botDraw,
-      compare: compareCards( playerDraw, botDraw )
+      comparison,
     }
-    console.log(handResult);
-    // this.client.onDrawEnd( handResult );
+    // console.log(handResult);
     this.events.emit( config.EVENTS.PLAYER_DRAW_END, handResult );
+
+    // do end of trick stuff. move cards to winner's hand, reshuffle, etc.
+    const drawCards = [ playerDraw, botDraw ];
+    const winner = comparison > -1 ? this.playerHand : this.botHand;
+    winner.takeCards( drawCards );
+
+    // check if we're out of cards (lost) or need to reshuffle
+    this.checkEnd( this.playerHand, config.PLAYER_CONST );
+    this.checkEnd( this.botHand, config.OPPONENT_CONST );
+  }
+
+  checkEnd( hand, playerIndicator ){
+    if( hand.handCards.length == 0 ){
+      if( hand.wonCards.length == 0 ) {
+        this.events.emit( config.EVENTS.GAME_OVER, playerIndicator );
+      }
+      else {
+        hand.reshuffle();
+        this.events.emit( config.EVENTS.RESHUFFLE, playerIndicator, hand.handCards.length );
+      }
+    }
   }
 }
+
+
 
 // returns two hands of 26 cards each
 const initialShuffle = () => {

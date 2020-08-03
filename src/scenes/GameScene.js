@@ -57,6 +57,12 @@ export default class GameScene extends PGGScene
         config.EVENTS.PLAYER_DRAW_END,
         this.onDrawEnd,
         this );
+    this.referee.events.on(
+      config.EVENTS.RESHUFFLE, this.onReshuffle, this
+    )
+    this.referee.events.on(
+      config.EVENTS.GAME_OVER, this.onGameOver, this
+    )
 
     this.referee.onClientConnect( this );
 
@@ -69,16 +75,38 @@ export default class GameScene extends PGGScene
     this.playerDisplay.onInitialDeal( numCardsDealt );
   }
 
+  // on receiving results of draw from the referee.
   onDrawEnd( result ) {
-    // console.log('draw result: ' + result);
     const { playerDraw, botDraw, comparison } = result;
     this.playerDisplay.showFlip( playerDraw );
     this.botDisplay.showFlip( botDraw );
+
+    const flippedCards = [ this.playerDisplay.flippedCard, this.botDisplay.flippedCard ];
+    const winner = comparison > -1 ? this.playerDisplay : this.botDisplay;
+    winner.takeCards( flippedCards );
+
+    this.playerDisplay.flippedCard = null;
+    this.botDisplay.flippedCard = null;
   }
   
+  // listener for player clicking the "draw" button
   onDrawClicked() {
-    console.log('draw clicked!');
-    // this.referee.onPlayerDraw();
     this.events.emit( config.EVENTS.PLAYER_DRAW_START );
+  }
+
+  // listener for a player needing to reshuffle
+  onReshuffle( shuffler, numCards ) {
+    this.time.addEvent({
+      delay: 200,
+      callback: () => {
+        const display = shuffler == config.PLAYER_CONST ? this.playerDisplay : this.botDisplay;
+        display.reshuffle( numCards );
+      }
+    })
+  }
+
+  onGameOver( losingPlayer ) {
+    const message = losingPlayer == config.PLAYER_CONST ? "YOU LOST :-(" : "YOU WON!";
+    alert(message);
   }
 }

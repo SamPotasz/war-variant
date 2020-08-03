@@ -1,7 +1,8 @@
 import 'phaser';
 import config from '../config/config'
 
-const HAND_STACK_POS = { x: 375 / 2, y: config.height - 50 }
+//how much to rotate the winning cards as we stack them
+const ANGLE_PER_WIN_CARD = 3;
 
 export default class HandDisplay {
   constructor({ scene, isPlayer }) {
@@ -16,6 +17,7 @@ export default class HandDisplay {
 
     // y position cards get flipped to for each player
     this.flipTargetY = isPlayer ? config.height / 2 + 50 : config.height / 2 - 50;
+    this.flippedCard = null;
 
     this.numCardsInHand = 0;
     this.numCardsInWon = 0;
@@ -28,6 +30,11 @@ export default class HandDisplay {
     Phaser.Actions.SetXY( this.handStack.getChildren(), 
       config.width / 2, this.handStackY, 0, this.handStackYStep );
   
+    this.winStack = this.scene.add.group();
+    this.winStackX = isPlayer ? config.width * 3/4 : config.width * 1/4;
+    this.winStackY = isPlayer ? config.height - padding - avatar.height / 2 : padding + avatar.height / 2;
+    console.log(isPlayer, this.winStackX, this.winStackY);
+
     // make player's cards clickable
     if( isPlayer ){
       this.handStack.getChildren().forEach( child => {
@@ -35,8 +42,6 @@ export default class HandDisplay {
         child.on( 'pointerdown', this.onDrawClicked, this );
       });
     }
-
-    this.flippedCard = null;
   }
 
   onInitialDeal( numCardsDealt ) {
@@ -57,7 +62,6 @@ export default class HandDisplay {
   // update the graphics of what's in our hand
   updateStackDisplays() {
     this.updateHandStack();
-    this.updateWonStack();
   }
 
   updateHandStack() {
@@ -67,27 +71,61 @@ export default class HandDisplay {
     })
   }
 
-  updateWonStack() {
-
-  }
-
   showFlip( cardNumber ) {
     console.log('flipping card ' + cardNumber);
-    const sprite = this.scene.add.sprite( 0, 0, config.ATLAS_NAME, 52 - cardNumber );
+    this.flippedCard = this.scene.add.sprite( 0, 0, config.ATLAS_NAME, 52 - cardNumber );
     // this.scene.add.existing(sprite);
     const yOffset = this.handStackYStep * this.numCardsInHand;
-    sprite.setPosition( config.width / 2, this.handStackY + yOffset );
-    console.log(sprite.x, sprite.y);
+    this.flippedCard.setPosition( config.width / 2, this.handStackY + yOffset );
+    // console.log(sprite.x, sprite.y);
 
     this.scene.tweens.add({
-      targets: sprite,
+      targets: this.flippedCard,
       y: this.flipTargetY,
-      duration: 600,
+      duration: 300,
       ease: 'Quad.easeOut',
     })
 
     this.numCardsInHand--;
     this.updateHandStack();
+  }
+
+  // adds array of cards to winStack
+  takeCards( cards ) {
+    // console.log("flipping cards to ", this.winStack.x, this.winStack.y);
+    cards.forEach( card => {
+      this.winStack.add( card );
+      this.scene.tweens.add({
+        targets: card,
+        x: { value: this.winStackX, duration: 400, ease: 'Quad.easeOut', delay: 500 },
+        y: { value: this.winStackY, duration: 400, ease: 'Quad.easeOut', delay: 500  },
+      })
+    })
+  }
+
+  // move all the cards in the win stack to the main stack
+  reshuffle( numCards ) {
+    console.log('reshuffling ' + numCards );
+    this.winStack.getChildren().forEach( (sprite, i) => {
+      const delay = Math.random() * 500;
+      // sprite.setFrame( config.CARD_BACK );
+      this.scene.tweens.add({
+        targets: sprite,
+        x: { value: config.width / 2, duration: 300, delay },
+        y: { value: this.handStackY + i * this.handStackYStep, duration: 300, delay },
+        onComplete: () => { 
+          this.winStack.remove( sprite );
+          sprite.setVisible( false );
+        }
+      })
+    })
+
+    this.scene.time.addEvent({
+      delay: 800,
+      callback: this.onInitialDeal,
+      args: [numCards],
+      callbackScope: this
+    })
   }
 }
 

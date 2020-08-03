@@ -8,14 +8,23 @@ export default class Hand {
     if( this.handCards.length > 0 ) {
       return this.handCards.shift();
     }
-    else if( this.wonCards.length > 0 ){
-      this.handCards = reshuffle( this.wonCards );
-      this.drawTopCard();
-    }
+    // else if( this.wonCards.length > 0 ){
+    //   this.handCards = reshuffle( this.wonCards );
+    //   this.drawTopCard();
+    // }
     else { 
       console.log("OUT OF CARDS!");
       return [];
     }
+  }
+
+  takeCards( cards ) {
+    this.wonCards = this.wonCards.concat( cards );
+  }
+
+  reshuffle() {
+    this.handCards = Phaser.Actions.Shuffle( this.wonCards );
+    this.wonCards = [];
   }
 }
 
