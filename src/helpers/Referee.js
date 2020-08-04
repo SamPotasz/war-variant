@@ -30,14 +30,14 @@ export default class Referee {
   }
 
   onPlayerDraw() {
-    const playerDraw = this.playerHand.drawTopCard();
-    const botDraw = this.botHand.drawTopCard();
-    const comparison = compareCards( playerDraw, botDraw );
+    this.playerDraw = this.playerHand.drawTopCard();
+    this.botDraw = this.botHand.drawTopCard();
+    const comparison = compareCards( this.playerDraw, this.botDraw );
 
-    console.log(this.playerHand.totalCards);
+    // console.log(this.playerHand.totalCards);
     const handResult = {
-      playerDraw,
-      botDraw,
+      playerDraw: this.playerDraw,
+      botDraw: this.botDraw,
       comparison,
       numPlayerCards: this.playerHand.totalCards
     }
@@ -45,7 +45,7 @@ export default class Referee {
     this.events.emit( config.EVENTS.PLAYER_DRAW_END, handResult );
 
     // do end of trick stuff. move cards to winner's hand, reshuffle, etc.
-    const drawCards = [ playerDraw, botDraw ];
+    const drawCards = [ this.playerDraw, this.botDraw ];
     if( comparison == 0 ) {
       // const playerWarPrep = this.prepForWar( this.playerHand, config.PLAYER_CONST );
       // const botWarPrep = this.prepForWar( this.botHand, config.OPPONENT_CONST );
@@ -61,31 +61,74 @@ export default class Referee {
   }
 
   // player has selected a move! let's respond
-  onWarInput( warActionType ) {
-    let cardsNeeded;
-    switch( warActionType ) {
-      case config.WAR_ACTIONS.DEFENSE: 
-        cardsNeeded = BUTTONS.HIGH_DEF.cost;
-        break;
-      case config.WAR_ACTIONS.HOLD:
-        cardsNeeded = BUTTONS.HOLD.cost;
-        break;
-      case config.WAR_ACTIONS.MID_ATTACK:
-        cardsNeeded = BUTTONS.MID_ATT.cost;
-        break;
-      default: cardsNeeded = 100;
-    }
-    console.log("we need " + cardsNeeded + " cards");
+  onWarInput( playerActionType ) {
+    const playerCardsNeeded = this.getCardsForAction( playerActionType );
 
-    const playerWar = this.prepForWar( this.playerHand, cardsNeeded );
+    const playerWar = this.prepForWar( this.playerHand, playerCardsNeeded, this.playerDraw );
     this.events.emit( 
       config.EVENTS.WAR_RESPONSE,
       {
-        ...playerWar,
-        playerIndicator: config.PLAYER_CONST,
-        numHandCards: this.playerHand.handCards.length,
-        warActionType
-    })
+          ...playerWar,
+          playerIndicator: config.PLAYER_CONST,
+          numHandCards: this.playerHand.handCards.length,
+          numWinCards: this.playerHand.wonCards.length,
+          warActionType: playerActionType
+    });
+
+    // pick random bot action
+    const botAction = Phaser.Math.RND.pick([ 
+      config.WAR_ACTIONS.DEFENSE,
+      config.WAR_ACTIONS.HOLD,
+      config.WAR_ACTIONS.MID_ATTACK,
+      config.WAR_ACTIONS.BIG_ATTACK
+    ]);
+    // console.log('bot picked action');
+    // console.log({botAction})
+    const botCardsNeeded = this.getCardsForAction( botAction );
+    const botWar = this.prepForWar( this.botHand, botCardsNeeded, this.botDraw );
+    this.events.emit( 
+      config.EVENTS.WAR_RESPONSE,
+      {
+          ...botWar,
+          playerIndicator: config.OPPONENT_CONST,
+          numHandCards: this.botHand.handCards.length,
+          numWinCards: this.botHand.wonCards.length,
+          botAction
+    });
+
+    // now actually do something with the war cards! (see who won)
+
+    // first check if we blocked successfully either direction
+    if( playerActionType == config.WAR_ACTIONS.DEFENSE && botAction == config.WAR_ACTIONS.BIG_ATTACK ) {
+      // player wins. they get all the bot's cards.
+      console.log('DING DING DING')
+      this.playerHand.takeCards( botWar.warCards );
+      this.events.emit( config.EVENTS.WAR_COMPLETE, config.PLAYER_CONST );
+    }
+    else if( botAction == config.WAR_ACTIONS.DEFENSE && playerActionType == config.WAR_ACTIONS.BIG_ATTACK ) {
+      this.botHand.takeCards( playerWar.warCards );
+      this.events.emit( config.EVENTS.WAR_COMPLETE, config.OPPONENT_CONST );
+    }
+    else {    // otherwise, compare values
+      const summator = ( accumulator, currVal ) => accumulator + Math.floor( currVal / 4 );
+      const playerTotal = playerWar.warCards.reduce( summator );
+      const botTotal = botWar.warCards.reduce( summator );
+
+      // tie goes to the player here. big TODO for now
+      const winningHand = playerTotal >= botTotal ? this.playerHand : this.botHand;
+      winningHand.takeCards( playerWar.warCards );
+      winningHand.takeCards( botWar.warCards );
+      const winningIndicator = winningHand == this.playerHand ? config.PLAYER_CONST : config.OPPONENT_CONST;
+
+      const response = {
+        playerTotal,
+        botTotal,
+        winningPlayer: winningIndicator,
+      }
+
+      // let the client know what happened
+      this.events.emit( config.EVENTS.WAR_COMPLETE, response );
+    }
   }
 
   checkEnd( hand, playerIndicator ){
@@ -100,12 +143,24 @@ export default class Referee {
     }
   }
 
+  getCardsForAction( warActionType ) {
+    switch( warActionType ) {
+      case config.WAR_ACTIONS.DEFENSE: 
+        return BUTTONS.HIGH_DEF.cost;
+      case config.WAR_ACTIONS.HOLD:
+        return BUTTONS.HOLD.cost;
+      case config.WAR_ACTIONS.MID_ATTACK:
+        return BUTTONS.MID_ATT.cost;
+      default: return 100;
+    }
+  }
+
   // checks whether there are enough cards in the hand of the given player.
   // if not, shuffles up and tells the client to update the UI
-  prepForWar( hand, cardsNeeded ) {
+  prepForWar( hand, cardsNeeded, drawnCard ) {
     const needsReshuffle = hand.handCards.length < cardsNeeded;
-    const warCards = hand.getCardsForWar( cardsNeeded );
-    console.log(warCards);
+    const warCards = hand.getCardsForWar( cardsNeeded ).concat( drawnCard );
+    // console.log(warCards);
 
     return { warCards, needsReshuffle };
   }
@@ -123,12 +178,12 @@ const initialShuffle = () => {
   for( var i = 0; i < 52; i++ ) {
     deck.push( i );
   }
-  console.log({deck})
+  // console.log({deck})
 
   var dealingLeft = true;
   while( deck.length > 0 ) {
     // pick random card
-    const index = 0 //Math.random() * deck.length;
+    const index = Math.random() * deck.length;
     const card = deck.splice( index, 1 );
 
     const dealingTo = dealingLeft ? handOne : handTwo;

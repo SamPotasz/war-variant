@@ -1,9 +1,35 @@
-# Phaser 3 Webpack Project Template
+# War Variant web game dev project :-)
 
-A Phaser 3 project template with ES6 support via [Babel 7](https://babeljs.io/) and [Webpack 4](https://webpack.js.org/)
-that includes hot-reloading for development and production-ready builds.
+Here's a little version of the classic game war with a twist. Each time there's a "war," you have a choice to make. You can choose how many cards to add to the war in order to get a higher score and increase your chances of winning. The sum of the point values of each card wagered makes up your total score.
 
-Loading images via JavaScript module `import` is also supported.
+*HOWEVER*, with this variant, there's not much of a decision. You should wager the most cards possible every time. And then when you have fewer cards than your opponent, it becomes even *harder* to come back than in regular war.
+
+In my variant, I introduced a separate choice mechanic: The ability to _defend_ against large attacks. When a WAR occurs, you can either launch a BIG ATTACK, using all of your cards, a MID ATTACK, using 10 cards, a normal war (4 cards), or GUARD.
+
+Guarding _automatically_ defeats a BIG ATTACK. So now there's some risk to mashing the BIG ATTACK button!
+
+Additionally, GUARD comes with it's own risks. When you GUARD, you have to _sacrifice_ (trash) 5 cards. Permanently. So GUARD also comes with its own risks and makes it so when both players choose a defensive tactic, it's apparent they left gains on the table (had they chosen MID ATTACK).
+
+## Technical Decisions
+
+Architecturally, even though this game is only single player (you play locally against a bot who chooses randomly), it's architectured with an eye towards multiplayer.
+
+Traditionally, a single player game would keep all the state on the client. 
+
+In this game, the state is refactored out, as _if_ it were being stored on a server. This will prevent cheating when the game moves to multiplayer. It was an additional programming challenge, but I thought it'd be useful to mirror this paradigm for the exercise. 
+
+`Referee.js` is the erstwhile server class, and it communicates only what is necessary to the client `GameScene.js` class. `GameScene.js` and related classes are rather pure display classes. They have absolutely no knowledge of the state of the game. They learn about each card one at a time when it's drawn as well as the size of the deck when the server tells it about it.
+
+For an 8-hour challenge, this was maybe a silly idea because it left less time for visual effects, but it was what I decided to emphasize, architecture-wise.
+
+## Missing pieces
+Due to time constraints, I haven't been able to get in everything I want, and the UI moves pretty fast. There's definitely not enough info for the game to be intelligible as of yet. Here's what's missing:
+- The score of each war is not shown to the player
+- The bot's choice for each war isn't shown to the player
+- The "trashed" cards when you choose "DEFENSE" aren't shown. Ideally, there'd be an animation that shows these cards being trashed. Did you just lose an Ace? That'd be a cool moment.
+- A successful DEFENSE isn't animated with any verve.
+- A whole bunch of polish (winning + losing screens, SFX, etc.)
+- instructions, tutorial, rules, etc.
 
 ## Requirements
 

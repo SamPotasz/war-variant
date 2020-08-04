@@ -39,7 +39,7 @@ export class WarDisplay {
   }
 
   declareWar( numPlayerCards ) {
-    console.log(numPlayerCards)
+    // console.log(numPlayerCards)
     this.title = this.scene.add.text( config.width / 2, config.height / 3,
       'WAR!', 
       { fontFamily: 'Boogaloo', fontSize: 60, color: '#000000' });
@@ -68,9 +68,9 @@ export class WarDisplay {
     this.label.setOrigin( 0.5 );
 
     // create buttons
+    this.buttonGroup = this.scene.add.group();
     const buttonY = this.label.y + 100;
     Object.values(BUTTONS).map( (value, i) => {
-      console.log(value, i);
 
       const x = i * 90 + 50;
       const buttonStyle = { fontFamily: 'Muli', fontSize: 10, color: '#000000' };
@@ -108,7 +108,26 @@ export class WarDisplay {
         button.setInteractive( false );
         button.setTint('0xffffff');
       }
+
+      this.buttonGroup.addMultiple( [button, buttonLabel, infoButton ]);
     });
+  }
+
+  close() {
+    this.buttonGroup.clear( true, true );
+    this.title.setVisible(false);
+    this.label.setVisible(false);
+  }
+
+  showResults( playerScore, botScore ) {
+    this.title = this.scene.add.text( config.width / 2, config.height / 3,
+      'WAR!', 
+      { fontFamily: 'Boogaloo', fontSize: 60, color: '#000000' });
     
+    this.title.setScale( 0.1 );
+    this.title.setOrigin( 0.5 );
+
+    const addOn = playerScore >= botScore ? "You win!" : "You lose!";
+    this.title.text = "Your score: " + playerScore + "\nOpponent: " + botScore + "\n" + addOn;
   }
 }

@@ -64,6 +64,8 @@ export default class GameScene extends PGGScene
         this );
     this.referee.events.on( config.EVENTS.WAR_RESPONSE,
       this.onWarResponse, this );
+    this.referee.events.on( config.EVENTS.WAR_COMPLETE,
+        this.onWarComplete, this );
     this.referee.events.on(
       config.EVENTS.RESHUFFLE, this.onReshuffle, this
     )
@@ -92,8 +94,6 @@ export default class GameScene extends PGGScene
     if( comparison == 0 ) {
       this.canDraw = false;
       this.warDisplay.declareWar( numPlayerCards );
-
-      // this.playerDisplay.
     }
     else {
       const winner = comparison > -1 ? this.playerDisplay : this.botDisplay;
@@ -104,9 +104,29 @@ export default class GameScene extends PGGScene
     }
   }
 
+  // we're doing a war! we've got the cards we need to display. now display them.
   onWarResponse( response ) {
-    const { needsReshuffle, warCards, numHandCards, playerIndicator, warActionType } = response;
+    const { needsReshuffle, warCards, numHandCards, numWinCards, playerIndicator, warActionType } = response;
     console.log( needsReshuffle, warCards, numHandCards, playerIndicator, warActionType );
+
+    const displayer = playerIndicator == config.PLAYER_CONST ? this.playerDisplay : this.botDisplay;
+    const isTrashing = warActionType == config.WAR_ACTIONS.DEFENSE;
+    displayer.showWarCards({ warCards, needsReshuffle, numHandCards, numWinCards, isTrashing });
+  }
+
+  onWarComplete( response ) {
+    const { playerTotal, botTotal, winningPlayer } = response;
+
+    const displayer = winningPlayer == config.PLAYER_CONST ? this.playerDisplay : this.botDisplay;
+    if( this.playerDisplay.warCards ){
+      displayer.takeCards( this.playerDisplay.warCards );
+    }
+    if( this.botDisplay.warCards ){
+      displayer.takeCards( this.botDisplay.warCards );
+    }
+    displayer.takeCards([ this.playerDisplay.flippedCard, this.botDisplay.flippedCard ])
+
+    this.canDraw = true;
   }
   
   // listener for player clicking the "draw" button
@@ -119,6 +139,7 @@ export default class GameScene extends PGGScene
 
   // received UI from player. pass it to server (referee)
   onWarActionSelect( actionType ) {
+    this.warDisplay.close();
     this.events.emit( config.EVENTS.WAR_ACTION, actionType );
   }
 
@@ -128,7 +149,7 @@ export default class GameScene extends PGGScene
       delay: 200,
       callback: () => {
         const display = shuffler == config.PLAYER_CONST ? this.playerDisplay : this.botDisplay;
-        display.reshuffle( numCards );
+        display.reshuffle( numCards, numCards );
       }
     })
   }

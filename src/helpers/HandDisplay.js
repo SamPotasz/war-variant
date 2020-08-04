@@ -72,22 +72,47 @@ export default class HandDisplay {
   }
 
   showFlip( cardNumber ) {
-    console.log('flipping card ' + cardNumber);
     this.flippedCard = this.scene.add.sprite( 0, 0, config.ATLAS_NAME, 52 - cardNumber );
     // this.scene.add.existing(sprite);
     const yOffset = this.handStackYStep * this.numCardsInHand;
     this.flippedCard.setPosition( config.width / 2, this.handStackY + yOffset );
-    // console.log(sprite.x, sprite.y);
 
     this.scene.tweens.add({
       targets: this.flippedCard,
-      y: this.flipTargetY,
-      duration: 300,
-      ease: 'Quad.easeOut',
+      y: { value: this.flipTargetY, duration: 300, ease: 'Quad.easeOut' }
     })
-
+    
     this.numCardsInHand--;
     this.updateHandStack();
+  }
+
+  showWarCards({ warCards, needsReshuffle, numHandCards, numWinCards, isTrashing }) {
+    if( needsReshuffle ) {
+      this.reshuffle( numWinCards, numHandCards );
+    }
+
+    if( !isTrashing ){
+      this.warCards = [];
+      warCards.map( 
+        (card, i) => {
+          //skip the last card because it's the drawn card in the middle
+          if( i < warCards.length - 1){
+            const flipping = this.scene.add.sprite( 0, 0, config.ATLAS_NAME, 52 - card );
+            const yOffset = this.handStackYStep * this.numCardsInHand;
+            flipping.setPosition( config.width / 2, this.handStackY + yOffset );
+
+            this.scene.tweens.add({
+              targets: flipping,
+              x: { value: flipping.width / 2 + i * 10, duration: 300, ease: 'Quad.easeOut' },
+              y: { value: this.flipTargetY, duration: 300, ease: 'Quad.easeOut' }
+            })
+        
+            this.warCards.push( flipping );
+            this.numCardsInHand--;
+            this.updateHandStack();
+        }
+      })
+    }
   }
 
   // adds array of cards to winStack
@@ -104,8 +129,8 @@ export default class HandDisplay {
   }
 
   // move all the cards in the win stack to the main stack
-  reshuffle( numCards ) {
-    console.log('reshuffling ' + numCards );
+  reshuffle( cardsToShuffle, newHandCards ) {
+    console.log('reshuffling ' + cardsToShuffle );
     this.winStack.getChildren().forEach( (sprite, i) => {
       const delay = Math.random() * 500;
       // sprite.setFrame( config.CARD_BACK );
@@ -123,7 +148,7 @@ export default class HandDisplay {
     this.scene.time.addEvent({
       delay: 800,
       callback: this.onInitialDeal,
-      args: [numCards],
+      args: [newHandCards],
       callbackScope: this
     })
   }
