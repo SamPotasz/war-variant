@@ -1,5 +1,6 @@
 import 'phaser';
 import config from '../config/config';
+import { BUTTONS } from './WarDisplay';
 import Hand from './Hand';
 
 // referee models & manages gamestate for one game
@@ -15,7 +16,7 @@ export default class Referee {
   onClientConnect( client ) {
     // console.log('client connected', client);
     client.events.on( config.EVENTS.PLAYER_DRAW_START, this.onPlayerDraw , this );
-    console.log(client);
+    client.events.on( config.EVENTS.WAR_ACTION, this.onWarInput, this);
   }
   
   // create initial starting hands.
@@ -33,22 +34,58 @@ export default class Referee {
     const botDraw = this.botHand.drawTopCard();
     const comparison = compareCards( playerDraw, botDraw );
 
+    console.log(this.playerHand.totalCards);
     const handResult = {
       playerDraw,
       botDraw,
       comparison,
+      numPlayerCards: this.playerHand.totalCards
     }
     // console.log(handResult);
     this.events.emit( config.EVENTS.PLAYER_DRAW_END, handResult );
 
     // do end of trick stuff. move cards to winner's hand, reshuffle, etc.
     const drawCards = [ playerDraw, botDraw ];
-    const winner = comparison > -1 ? this.playerHand : this.botHand;
-    winner.takeCards( drawCards );
+    if( comparison == 0 ) {
+      // const playerWarPrep = this.prepForWar( this.playerHand, config.PLAYER_CONST );
+      // const botWarPrep = this.prepForWar( this.botHand, config.OPPONENT_CONST );
+    }
+    else {
+      const winner = comparison > -1 ? this.playerHand : this.botHand;
+      winner.takeCards( drawCards );
 
-    // check if we're out of cards (lost) or need to reshuffle
-    this.checkEnd( this.playerHand, config.PLAYER_CONST );
-    this.checkEnd( this.botHand, config.OPPONENT_CONST );
+      // check if we're out of cards (lost) or need to reshuffle
+      this.checkEnd( this.playerHand, config.PLAYER_CONST );
+      this.checkEnd( this.botHand, config.OPPONENT_CONST );
+    }
+  }
+
+  // player has selected a move! let's respond
+  onWarInput( warActionType ) {
+    let cardsNeeded;
+    switch( warActionType ) {
+      case config.WAR_ACTIONS.DEFENSE: 
+        cardsNeeded = BUTTONS.HIGH_DEF.cost;
+        break;
+      case config.WAR_ACTIONS.HOLD:
+        cardsNeeded = BUTTONS.HOLD.cost;
+        break;
+      case config.WAR_ACTIONS.MID_ATTACK:
+        cardsNeeded = BUTTONS.MID_ATT.cost;
+        break;
+      default: cardsNeeded = 100;
+    }
+    console.log("we need " + cardsNeeded + " cards");
+
+    const playerWar = this.prepForWar( this.playerHand, cardsNeeded );
+    this.events.emit( 
+      config.EVENTS.WAR_RESPONSE,
+      {
+        ...playerWar,
+        playerIndicator: config.PLAYER_CONST,
+        numHandCards: this.playerHand.handCards.length,
+        warActionType
+    })
   }
 
   checkEnd( hand, playerIndicator ){
@@ -61,6 +98,16 @@ export default class Referee {
         this.events.emit( config.EVENTS.RESHUFFLE, playerIndicator, hand.handCards.length );
       }
     }
+  }
+
+  // checks whether there are enough cards in the hand of the given player.
+  // if not, shuffles up and tells the client to update the UI
+  prepForWar( hand, cardsNeeded ) {
+    const needsReshuffle = hand.handCards.length < cardsNeeded;
+    const warCards = hand.getCardsForWar( cardsNeeded );
+    console.log(warCards);
+
+    return { warCards, needsReshuffle };
   }
 }
 
@@ -81,7 +128,7 @@ const initialShuffle = () => {
   var dealingLeft = true;
   while( deck.length > 0 ) {
     // pick random card
-    const index = Math.random() * deck.length;
+    const index = 0 //Math.random() * deck.length;
     const card = deck.splice( index, 1 );
 
     const dealingTo = dealingLeft ? handOne : handTwo;

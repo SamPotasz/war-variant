@@ -5,9 +5,7 @@ import PGGScene from './PGGScene';
 import Referee from '../helpers/Referee';
 
 import HandDisplay from '../helpers/HandDisplay';
-
-const AVI_PADDING = { x: 10, y: 10 };
-
+import {WarDisplay} from '../helpers/WarDisplay';
 
 export default class GameScene extends PGGScene 
 {
@@ -24,6 +22,8 @@ export default class GameScene extends PGGScene
     // only the referee / server should know the state of the game
     // but the client should know how many cards it has
     this.referee = new Referee( this );
+
+    this.canDraw = true;
 	}
 
 	create() 
@@ -33,12 +33,8 @@ export default class GameScene extends PGGScene
 		//hide the display
 		DomController.HideOverlay();
 		
-		// console.log("starting game scene");
-		// this.bg = this.add.sprite(config.width / 2, config.height / 2,
-    // 		config.ATLAS_NAME, config.TITLE_AND_GAME_BG);
     this.cameras.main.setBackgroundColor(0xCCCCCC);
 
-    
     this.botDisplay = new HandDisplay({
       scene: this,
       isPlayer: false,
@@ -49,6 +45,15 @@ export default class GameScene extends PGGScene
     });
     this.playerDisplay.events.on(config.EVENTS.DRAW_BUTTON_CLICK, this.onDrawClicked, this);
 
+    this.warDisplay = new WarDisplay({
+      scene: this
+    });
+    // listen for war button presses
+    this.warDisplay.events.on( 
+      config.EVENTS.WAR_ACTION,
+      this.onWarActionSelect, this
+    );
+
     this.referee.events.on(
       config.EVENTS.INITIAL_DEAL,
       this.onInitialDeal,
@@ -57,6 +62,8 @@ export default class GameScene extends PGGScene
         config.EVENTS.PLAYER_DRAW_END,
         this.onDrawEnd,
         this );
+    this.referee.events.on( config.EVENTS.WAR_RESPONSE,
+      this.onWarResponse, this );
     this.referee.events.on(
       config.EVENTS.RESHUFFLE, this.onReshuffle, this
     )
@@ -77,21 +84,42 @@ export default class GameScene extends PGGScene
 
   // on receiving results of draw from the referee.
   onDrawEnd( result ) {
-    const { playerDraw, botDraw, comparison } = result;
+    const { playerDraw, botDraw, comparison, numPlayerCards } = result;
     this.playerDisplay.showFlip( playerDraw );
     this.botDisplay.showFlip( botDraw );
 
     const flippedCards = [ this.playerDisplay.flippedCard, this.botDisplay.flippedCard ];
-    const winner = comparison > -1 ? this.playerDisplay : this.botDisplay;
-    winner.takeCards( flippedCards );
+    if( comparison == 0 ) {
+      this.canDraw = false;
+      this.warDisplay.declareWar( numPlayerCards );
 
-    this.playerDisplay.flippedCard = null;
-    this.botDisplay.flippedCard = null;
+      // this.playerDisplay.
+    }
+    else {
+      const winner = comparison > -1 ? this.playerDisplay : this.botDisplay;
+      winner.takeCards( flippedCards );
+
+      this.playerDisplay.flippedCard = null;
+      this.botDisplay.flippedCard = null;
+    }
+  }
+
+  onWarResponse( response ) {
+    const { needsReshuffle, warCards, numHandCards, playerIndicator, warActionType } = response;
+    console.log( needsReshuffle, warCards, numHandCards, playerIndicator, warActionType );
   }
   
   // listener for player clicking the "draw" button
   onDrawClicked() {
-    this.events.emit( config.EVENTS.PLAYER_DRAW_START );
+    if( this.canDraw )
+    {
+      this.events.emit( config.EVENTS.PLAYER_DRAW_START );
+    }
+  }
+
+  // received UI from player. pass it to server (referee)
+  onWarActionSelect( actionType ) {
+    this.events.emit( config.EVENTS.WAR_ACTION, actionType );
   }
 
   // listener for a player needing to reshuffle

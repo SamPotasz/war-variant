@@ -17,6 +17,10 @@ export default {
   TITLE_AND_GAME_BG: 'background',	//file name of background for title screen and main gameplay
   CARD_BACK: 'back',
   AVATAR_SPRITE: 'frogAvi',
+  INFO_BUTTON: 'info',
+  ATTACK_BUTTONS: 'red_button08',
+  HOLD_BUTTONS: 'grey_button10',
+  DEFENSE_BUTTONS: 'blue_button11',
 
   EVENTS: {
     INITIAL_DEAL: 'first deal of the game',
@@ -25,6 +29,15 @@ export default {
     PLAYER_DRAW_END: 'PLAYER_DRAW_END',
     GAME_OVER: 'GAME_OVER_EVENT',
     RESHUFFLE: 'RESHUFFLE_EVENT',
+    WAR_ACTION: 'WAR_ACTION_CLICKED',
+    WAR_RESPONSE: 'WAR_SERVER_RESPONSE',
+  },
+
+  WAR_ACTIONS: {
+    DEFENSE: "WAR_DEFENSE",
+    HOLD: "WAR_HOLD",
+    MID_ATTACK: "WAR_MID_ATTACK",
+    BIG_ATTACK: "GOING ALL IN",
   },
   
   PLAYER_CONST: 'THIS IS FOR THE PLAYER',
